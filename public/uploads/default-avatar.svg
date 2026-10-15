@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="avatarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="50%" stop-color="#7c3aed" />
+      <stop offset="100%" stop-color="#9333ea" />
+    </linearGradient>
+    <linearGradient id="accentGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+  </defs>
+  <!-- Background Circle with glow -->
+  <circle cx="100" cy="100" r="96" fill="#0f172a" stroke="url(#avatarGradient)" stroke-width="4" />
+  
+  <!-- Subtle inner ring -->
+  <circle cx="100" cy="100" r="90" fill="#1e1b4b" opacity="0.6" />
+
+  <!-- Code/Tech Accent Symbol -->
+  <g fill="none" stroke="url(#accentGradient)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.25">
+    <path d="M40 70 L25 100 L40 130" />
+    <path d="M160 70 L175 100 L160 130" />
+  </g>
+
+  <!-- Stylized Person Avatar -->
+  <circle cx="100" cy="72" r="28" fill="url(#avatarGradient)" />
+  <path d="M54 148 C54 116, 74 110, 100 110 C126 110, 146 116, 146 148 C146 160, 138 168, 100 168 C62 168, 54 160, 54 148 Z" fill="url(#avatarGradient)" opacity="0.9" />
+
+  <!-- Initials overlay badge -->
+  <rect x="75" y="148" width="50" height="24" rx="12" fill="#090d16" stroke="url(#accentGradient)" stroke-width="2" />
+  <text x="100" y="165" font-family="'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="bold" fill="#38bdf8" text-anchor="middle" letter-spacing="1">SPK</text>
+</svg>

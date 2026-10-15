@@ -1,0 +1,22 @@
+{
+  "success": true,
+  "projects": [
+    {
+      "id": 1,
+      "title": "FABBRIDGE",
+      "description": "FabBridge is a manufacturing collaboration platform that connects customers with suitable manufacturing companies.\r\nCustomers can request services, submit requirements, and receive quotations from companies.\r\nThey can accept quotations, confirm orders, and track manufacturing progress.\r\nFabBridge aims to simplify communication, improve resource utilization, and make manufacturing collaboration more efficient.",
+      "category": "Website",
+      "thumbnail": "/uploads/Screenshot__18_-1792038599320-25341.png",
+      "screenshots": [
+        "/uploads/Screenshot_2026-10-13_114720-1792038599328-273711.png"
+      ],
+      "technologies": "Frontend: HTML, CSS, JavaScript  Backend: Python  Database: Firebase Firestore",
+      "github_url": "",
+      "demo_url": "https://poetic-cendol-27ceb8.netlify.app/",
+      "status": "Completed",
+      "featured": 1,
+      "created_at": "2026-10-15 04:29:59",
+      "updated_at": "2026-10-15 04:29:59"
+    }
+  ]
+}

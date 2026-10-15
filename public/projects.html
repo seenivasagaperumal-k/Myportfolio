@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Projects Explorer | Seenivasaga Perumal K.</title>
+  
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <style>
+    .search-box-wrapper {
+      max-width: 550px;
+      margin: 0 auto 2.5rem auto;
+      position: relative;
+    }
+    .search-input {
+      width: 100%;
+      padding: 0.9rem 1.25rem 0.9rem 3rem;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-full);
+      color: #fff;
+      font-size: 1rem;
+      backdrop-filter: blur(10px);
+      transition: all var(--transition-fast);
+      outline: none;
+    }
+    .search-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+      background: rgba(15, 23, 42, 0.95);
+    }
+    .search-icon {
+      position: absolute;
+      left: 1.25rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-dim);
+      font-size: 1.1rem;
+    }
+    .page-banner {
+      padding: 8rem 0 3.5rem 0;
+      text-align: center;
+      background: radial-gradient(circle at 50% 20%, rgba(139, 92, 246, 0.15), transparent 70%);
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 3.5rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <header class="navbar" id="navbar">
+    <div class="container nav-container">
+      <a href="/index.html" class="nav-brand">
+        <div class="nav-brand-logo">SP</div>
+        <span>Seenivasaga <span class="gradient-text">P. K.</span></span>
+      </a>
+
+      <nav class="nav-menu" id="navMenu">
+        <a href="/index.html#hero" class="nav-link">Home</a>
+        <a href="/index.html#about" class="nav-link">About Me</a>
+        <a href="/index.html#skills" class="nav-link">Skills</a>
+        <a href="/projects.html" class="nav-link active">All Projects</a>
+        <a href="/index.html#education" class="nav-link">Education</a>
+        <a href="/index.html#contact" class="nav-link">Contact</a>
+        <a href="/login.html" class="nav-link"><i class="fas fa-lock"></i> Admin</a>
+      </nav>
+
+      <div class="nav-actions">
+        <a href="/index.html#contact" class="btn btn-primary btn-sm"><i class="fas fa-paper-plane"></i> Connect</a>
+        <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+          <i class="fas fa-bars"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Page Header -->
+  <div class="page-banner">
+    <div class="container">
+      <div class="section-tag"><i class="fas fa-folder-open"></i> Projects Showcase</div>
+      <h1 style="font-size: 2.8rem; font-weight: 800; margin-bottom: 0.75rem;">
+        Complete <span class="gradient-text">Project Works</span>
+      </h1>
+      <p style="color: var(--text-muted); max-width: 600px; margin: 0 auto;">
+        Browse through my software developments across Web Applications, Python solutions, Android Apps, and IoT systems.
+      </p>
+    </div>
+  </div>
+
+  <main class="container" style="min-height: 50vh; margin-bottom: 5rem;">
+    <!-- Search Bar -->
+    <div class="search-box-wrapper">
+      <i class="fas fa-search search-icon"></i>
+      <input type="text" id="projectSearchInput" class="search-input" placeholder="Search by project name, tech stack, or description...">
+    </div>
+
+    <!-- Category Filters -->
+    <div class="projects-filter-bar" id="categoryFilterBar">
+      <button class="filter-btn active" data-category="All">All Projects</button>
+      <button class="filter-btn" data-category="Website">Website</button>
+      <button class="filter-btn" data-category="Android App">Android App</button>
+      <button class="filter-btn" data-category="IoT">IoT Projects</button>
+      <button class="filter-btn" data-category="Python">Python</button>
+      <button class="filter-btn" data-category="Other">Other</button>
+    </div>
+
+    <!-- Projects Grid -->
+    <div class="projects-grid" id="projectsExplorerGrid">
+      <!-- Rendered dynamically via js/projects.js -->
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-top">
+        <div>
+          <div class="nav-brand" style="margin-bottom: 0.5rem;">
+            <div class="nav-brand-logo">SP</div>
+            <span>Seenivasaga <span class="gradient-text">Perumal K.</span></span>
+          </div>
+          <p style="color: var(--text-muted); font-size: 0.95rem;">Computer Science Student & Software Developer</p>
+        </div>
+        <div class="social-links-row">
+          <a href="/index.html" class="social-btn" title="Back to Home"><i class="fas fa-home"></i></a>
+          <a href="/login.html" class="social-btn" title="Admin Dashboard"><i class="fas fa-lock"></i></a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 Seenivasaga Perumal K. All rights reserved.</p>
+        <div>
+          <a href="/login.html" class="footer-admin-link">
+            <i class="fas fa-shield-halved"></i> Owner Dashboard Login
+          </a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/projects.js"></script>
+</body>
+</html>

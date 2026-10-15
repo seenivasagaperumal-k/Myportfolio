@@ -1,0 +1,100 @@
+{
+  "success": true,
+  "profile": {
+    "id": 1,
+    "name": "Seenivasaga Perumal K.",
+    "title": "Computer Science Student & Developer",
+    "bio": "Passionate Computer Science student and software developer with a strong foundation in modern web development, Python, Android applications, and IoT innovations. Enthusiastic about creating impactful digital solutions and continuously learning new technologies.",
+    "education_primary": "M.Sc Computer Science (Currently Pursuing)",
+    "education_secondary": "B.Sc Computer Science",
+    "location": "Rajapalayam, Tamil Nadu, India",
+    "interests": "Web Development, Python, Android App Development, IoT Projects, Technology",
+    "email": "seenukumar9345@gmail.com",
+    "github_url": "",
+    "linkedin_url": "",
+    "twitter_url": "",
+    "avatar_url": "/uploads/default-avatar.svg",
+    "resume_url": "",
+    "updated_at": "2026-10-15 04:19:23"
+  },
+  "skills": [
+    {
+      "id": 1,
+      "name": "HTML and CSS",
+      "category": "Frontend",
+      "proficiency": "Proficient",
+      "icon": "fab fa-html5",
+      "display_order": 1
+    },
+    {
+      "id": 2,
+      "name": "JavaScript",
+      "category": "Frontend",
+      "proficiency": "Proficient",
+      "icon": "fab fa-js",
+      "display_order": 2
+    },
+    {
+      "id": 3,
+      "name": "Python",
+      "category": "Backend & Scripting",
+      "proficiency": "Proficient",
+      "icon": "fab fa-python",
+      "display_order": 3
+    },
+    {
+      "id": 4,
+      "name": "Web Development",
+      "category": "Full Stack",
+      "proficiency": "Proficient",
+      "icon": "fas fa-globe",
+      "display_order": 4
+    },
+    {
+      "id": 5,
+      "name": "Android App Development",
+      "category": "Mobile",
+      "proficiency": "Proficient",
+      "icon": "fab fa-android",
+      "display_order": 5
+    },
+    {
+      "id": 6,
+      "name": "IoT Projects",
+      "category": "Hardware & IoT",
+      "proficiency": "Proficient",
+      "icon": "fas fa-microchip",
+      "display_order": 6
+    },
+    {
+      "id": 7,
+      "name": "Database Technologies",
+      "category": "Database",
+      "proficiency": "Proficient",
+      "icon": "fas fa-database",
+      "display_order": 7
+    }
+  ],
+  "education": [
+    {
+      "id": 1,
+      "type": "Education",
+      "title": "M.Sc Computer Science",
+      "institution": "Postgraduate Degree",
+      "year": "Currently Pursuing",
+      "description": "Advancing expertise in advanced algorithms, distributed computing, database systems, and software engineering.",
+      "credential_url": "",
+      "display_order": 1
+    },
+    {
+      "id": 2,
+      "type": "Education",
+      "title": "B.Sc Computer Science",
+      "institution": "Undergraduate Degree",
+      "year": "Completed",
+      "description": "Gained strong core competencies in computer science, data structures, programming, and web technologies.",
+      "credential_url": "",
+      "display_order": 2
+    }
+  ]
+}

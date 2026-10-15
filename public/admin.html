@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard | Seenivasaga Perumal K.</title>
+  
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar" id="adminSidebar">
+      <div class="admin-brand">
+        <div class="nav-brand-logo">SP</div>
+        <div>
+          <h4 style="font-size: 1rem; font-weight: 700;">Portfolio CMS</h4>
+          <span style="font-size: 0.75rem; color: #38bdf8;">Owner Control Panel</span>
+        </div>
+      </div>
+
+      <nav class="admin-nav">
+        <a class="admin-nav-item active" data-tab="tab-projects">
+          <i class="fas fa-folder-plus"></i>
+          <span>My Projects</span>
+        </a>
+        <a class="admin-nav-item" data-tab="tab-profile">
+          <i class="fas fa-id-card"></i>
+          <span>Profile Info</span>
+        </a>
+        <a class="admin-nav-item" data-tab="tab-skills">
+          <i class="fas fa-code"></i>
+          <span>Skills</span>
+        </a>
+        <a class="admin-nav-item" data-tab="tab-education">
+          <i class="fas fa-graduation-cap"></i>
+          <span>Education & Awards</span>
+        </a>
+        <a class="admin-nav-item" data-tab="tab-messages">
+          <i class="fas fa-inbox"></i>
+          <span>Inquiries</span>
+          <span id="unreadBadge" class="table-badge completed" style="margin-left: auto; display: none;">0</span>
+        </a>
+        <a class="admin-nav-item" data-tab="tab-security">
+          <i class="fas fa-shield-alt"></i>
+          <span>Security</span>
+        </a>
+      </nav>
+
+      <div class="admin-user-footer">
+        <a href="/index.html" target="_blank" class="btn btn-secondary btn-sm" style="flex: 1; margin-right: 0.5rem;" title="View Live Website">
+          <i class="fas fa-globe"></i> View Site
+        </a>
+        <button id="logoutBtn" class="btn btn-outline btn-sm btn-icon-only" title="Sign Out">
+          <i class="fas fa-right-from-bracket"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="admin-main">
+      <div class="admin-header">
+        <div class="admin-header-title">
+          <h1 id="tabHeaderTitle">Manage Projects</h1>
+          <p id="tabHeaderSubtitle">Upload, edit, and organize your software projects</p>
+        </div>
+        <div style="display: flex; gap: 0.75rem;">
+          <a href="/index.html" target="_blank" class="btn btn-outline btn-sm">
+            <i class="fas fa-arrow-up-right-from-square"></i> Live Portfolio
+          </a>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Grid -->
+      <div class="admin-stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fas fa-project-diagram"></i></div>
+          <div class="stat-data">
+            <h3 id="statTotalProjects">0</h3>
+            <span>Total Projects</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="color: #38bdf8; background: rgba(56, 189, 248, 0.15);"><i class="fas fa-code"></i></div>
+          <div class="stat-data">
+            <h3 id="statTotalSkills">0</h3>
+            <span>Skills Active</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="color: #34d399; background: rgba(16, 185, 129, 0.15);"><i class="fas fa-envelope-open-text"></i></div>
+          <div class="stat-data">
+            <h3 id="statTotalMessages">0</h3>
+            <span>Received Messages</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= TAB: PROJECTS ================= -->
+      <section id="tab-projects" class="admin-tab-content active">
+        <div class="admin-table-container">
+          <div class="admin-table-header">
+            <h3>Projects Repository</h3>
+            <button class="btn btn-primary btn-sm" id="btnOpenAddProjectModal">
+              <i class="fas fa-plus"></i> Upload New Project
+            </button>
+          </div>
+
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Thumbnail</th>
+                <th>Project Title</th>
+                <th>Category</th>
+                <th>Technologies</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminProjectsTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ================= TAB: PROFILE ================= -->
+      <section id="tab-profile" class="admin-tab-content">
+        <div class="about-grid">
+          <!-- Profile Details Form -->
+          <div class="card">
+            <h3 style="margin-bottom: 1.5rem;">Edit Personal & Bio Details</h3>
+            <div id="profileFeedback" class="form-feedback"></div>
+
+            <form id="profileForm">
+              <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" id="profName" class="form-input" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Professional Title / Headline</label>
+                <input type="text" id="profTitle" class="form-input" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Current Education</label>
+                <input type="text" id="profEduPrimary" class="form-input" placeholder="e.g. M.Sc Computer Science (Currently Pursuing)">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Previous Education</label>
+                <input type="text" id="profEduSecondary" class="form-input" placeholder="e.g. B.Sc Computer Science">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Location</label>
+                <input type="text" id="profLocation" class="form-input" placeholder="e.g. Rajapalayam, Tamil Nadu, India">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Technical Interests (Comma Separated)</label>
+                <input type="text" id="profInterests" class="form-input" placeholder="Web Development, Python, Android App Development, IoT Projects, Technology">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">About / Biography</label>
+                <textarea id="profBio" class="form-textarea" rows="4"></textarea>
+              </div>
+
+              <h4 style="margin: 1.5rem 0 1rem 0; color: #c084fc;">Contact & Social Profiles</h4>
+
+              <div class="form-group">
+                <label class="form-label">Email Address (Optional / Displayed)</label>
+                <input type="email" id="profEmail" class="form-input" placeholder="yourname@example.com">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">GitHub Profile URL</label>
+                <input type="url" id="profGithub" class="form-input" placeholder="https://github.com/yourusername">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">LinkedIn Profile URL</label>
+                <input type="url" id="profLinkedin" class="form-input" placeholder="https://linkedin.com/in/yourprofile">
+              </div>
+
+              <button type="submit" class="btn btn-primary" id="btnSaveProfile">
+                <i class="fas fa-save"></i> Save Profile Details
+              </button>
+            </form>
+          </div>
+
+          <!-- Profile Photo Upload -->
+          <div class="card" style="height: fit-content;">
+            <h3 style="margin-bottom: 1.5rem;">Profile Photo</h3>
+            <div style="text-align: center; margin-bottom: 1.5rem;">
+              <img id="adminAvatarPreview" src="/uploads/default-avatar.svg" style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; margin: 0 auto; border: 3px solid var(--primary); box-shadow: 0 10px 25px rgba(0,0,0,0.5);" alt="Avatar preview">
+            </div>
+
+            <form id="avatarUploadForm">
+              <div class="form-group">
+                <label class="form-label">Upload New Photo (JPG, PNG, WEBP)</label>
+                <input type="file" id="avatarFileInput" class="form-input" accept="image/*" required>
+              </div>
+              <button type="submit" class="btn btn-secondary" style="width: 100%;">
+                <i class="fas fa-cloud-arrow-up"></i> Upload Photo
+              </button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= TAB: SKILLS ================= -->
+      <section id="tab-skills" class="admin-tab-content">
+        <div class="admin-table-container">
+          <div class="admin-table-header">
+            <h3>Technical Skills</h3>
+            <button class="btn btn-primary btn-sm" id="btnOpenAddSkillModal">
+              <i class="fas fa-plus"></i> Add Skill
+            </button>
+          </div>
+
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Skill Name</th>
+                <th>Category</th>
+                <th>Proficiency</th>
+                <th>Display Order</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminSkillsTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ================= TAB: EDUCATION & AWARDS ================= -->
+      <section id="tab-education" class="admin-tab-content">
+        <div class="admin-table-container">
+          <div class="admin-table-header">
+            <h3>Education & Certifications</h3>
+            <button class="btn btn-primary btn-sm" id="btnOpenAddEduModal">
+              <i class="fas fa-plus"></i> Add Qualification / Milestone
+            </button>
+          </div>
+
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Degree / Title</th>
+                <th>Institution</th>
+                <th>Year</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminEduTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ================= TAB: INQUIRIES ================= -->
+      <section id="tab-messages" class="admin-tab-content">
+        <div class="admin-table-container">
+          <div class="admin-table-header">
+            <h3>Contact Inquiries</h3>
+          </div>
+
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Sender</th>
+                <th>Email</th>
+                <th>Subject</th>
+                <th>Received Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminMessagesTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ================= TAB: SECURITY ================= -->
+      <section id="tab-security" class="admin-tab-content">
+        <div class="card" style="max-width: 550px;">
+          <h3 style="margin-bottom: 1.25rem;"><i class="fas fa-lock"></i> Change Admin Password</h3>
+          <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.95rem;">
+            Update your master password to keep your portfolio dashboard secure.
+          </p>
+
+          <div id="passwordFeedback" class="form-feedback"></div>
+
+          <form id="changePasswordForm">
+            <div class="form-group">
+              <label class="form-label">Current Password</label>
+              <input type="password" id="currentPassInput" class="form-input" placeholder="••••••••" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">New Password (min 6 characters)</label>
+              <input type="password" id="newPassInput" class="form-input" placeholder="••••••••" required minlength="6">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Confirm New Password</label>
+              <input type="password" id="confirmPassInput" class="form-input" placeholder="••••••••" required minlength="6">
+            </div>
+            <button type="submit" class="btn btn-primary" id="btnUpdatePassword">
+              <i class="fas fa-key"></i> Update Password
+            </button>
+          </form>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ================= MODALS ================= -->
+
+  <!-- Add / Edit Project Modal -->
+  <div class="modal-backdrop" id="projectModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="projectModalTitle"><i class="fas fa-upload"></i> Upload New Project</h3>
+        <button class="modal-close" onclick="closeProjectModal()">&times;</button>
+      </div>
+
+      <form id="projectForm" enctype="multipart/form-data">
+        <div class="modal-body">
+          <input type="hidden" id="projFormId">
+          <div id="projectFormFeedback" class="form-feedback"></div>
+
+          <div class="form-group">
+            <label class="form-label">Project Title *</label>
+            <input type="text" id="projFormTitle" class="form-input" placeholder="e.g. IoT Smart Home Automation" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Category *</label>
+            <select id="projFormCategory" class="form-select" required>
+              <option value="Website">Website</option>
+              <option value="Android App">Android App</option>
+              <option value="IoT">IoT</option>
+              <option value="Python">Python</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Technologies Used * (Comma-separated)</label>
+            <input type="text" id="projFormTech" class="form-input" placeholder="e.g. Python, Flask, SQLite, HTML5, CSS3" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Project Status</label>
+            <select id="projFormStatus" class="form-select">
+              <option value="Completed">Completed</option>
+              <option value="In Progress">In Progress</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">GitHub Repository URL (Optional)</label>
+            <input type="url" id="projFormGithub" class="form-input" placeholder="https://github.com/username/project">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Live Demo URL (Optional)</label>
+            <input type="url" id="projFormDemo" class="form-input" placeholder="https://demo.example.com">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Cover / Thumbnail Image *</label>
+            <input type="file" id="projFormThumb" class="form-input" accept="image/*">
+            <small style="color: var(--text-dim); display:block; margin-top:4px;">Main preview picture for project card.</small>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Additional Screenshots (Select up to 10)</label>
+            <input type="file" id="projFormScreenshots" class="form-input" accept="image/*" multiple>
+            <small style="color: var(--text-dim); display:block; margin-top:4px;">Upload multiple screenshots for gallery carousel.</small>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Project Description *</label>
+            <textarea id="projFormDesc" class="form-textarea" placeholder="Detailed description of features, problem solved, and architecture..." required></textarea>
+          </div>
+
+          <div class="form-group" style="display: flex; align-items: center; gap: 0.6rem;">
+            <input type="checkbox" id="projFormFeatured" style="width: 18px; height: 18px; accent-color: var(--primary);">
+            <label for="projFormFeatured" class="form-label" style="margin-bottom: 0; cursor: pointer;">Feature on Home Page</label>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeProjectModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitProject">
+            <i class="fas fa-cloud-arrow-up"></i> Save & Publish Project
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Skill Modal -->
+  <div class="modal-backdrop" id="skillModal">
+    <div class="modal-box" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 id="skillModalTitle">Add New Skill</h3>
+        <button class="modal-close" onclick="closeSkillModal()">&times;</button>
+      </div>
+      <form id="skillForm">
+        <div class="modal-body">
+          <input type="hidden" id="skillFormId">
+          <div class="form-group">
+            <label class="form-label">Skill Name *</label>
+            <input type="text" id="skillFormName" class="form-input" placeholder="e.g. Python" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <input type="text" id="skillFormCat" class="form-input" placeholder="e.g. Backend, Frontend, Hardware">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Icon Class (FontAwesome)</label>
+            <input type="text" id="skillFormIcon" class="form-input" placeholder="e.g. fab fa-python, fas fa-code">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Display Order (Integer)</label>
+            <input type="number" id="skillFormOrder" class="form-input" value="1">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeSkillModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Skill</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Education Modal -->
+  <div class="modal-backdrop" id="eduModal">
+    <div class="modal-box" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 id="eduModalTitle">Add Milestone</h3>
+        <button class="modal-close" onclick="closeEduModal()">&times;</button>
+      </div>
+      <form id="eduForm">
+        <div class="modal-body">
+          <input type="hidden" id="eduFormId">
+          <div class="form-group">
+            <label class="form-label">Type</label>
+            <select id="eduFormType" class="form-select">
+              <option value="Education">Education</option>
+              <option value="Certificate">Certificate</option>
+              <option value="Achievement">Achievement</option>
+              <option value="Workshop">Workshop</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Title / Degree *</label>
+            <input type="text" id="eduFormTitle" class="form-input" placeholder="e.g. M.Sc Computer Science" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Institution / Issuer *</label>
+            <input type="text" id="eduFormInst" class="form-input" placeholder="e.g. University / Academy" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Year / Duration *</label>
+            <input type="text" id="eduFormYear" class="form-input" placeholder="e.g. 2024 - 2026" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description (Optional)</label>
+            <textarea id="eduFormDesc" class="form-textarea" rows="3" placeholder="Key focus areas, coursework, or honors..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeEduModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Milestone</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- View Message Modal -->
+  <div class="modal-backdrop" id="messageModal">
+    <div class="modal-box" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3><i class="fas fa-envelope-open"></i> Contact Message</h3>
+        <button class="modal-close" onclick="closeMessageModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p><strong>From:</strong> <span id="msgModalSender"></span></p>
+        <p><strong>Email:</strong> <span id="msgModalEmail"></span></p>
+        <p><strong>Date:</strong> <span id="msgModalDate"></span></p>
+        <p><strong>Subject:</strong> <span id="msgModalSubject"></span></p>
+        <hr style="margin: 1rem 0; border: none; border-top: 1px solid rgba(255,255,255,0.08);">
+        <p style="white-space: pre-wrap; color: var(--text-muted);" id="msgModalBody"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeMessageModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/admin.js"></script>
+</body>
+</html>
