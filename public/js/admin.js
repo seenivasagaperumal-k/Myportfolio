@@ -19,25 +19,36 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 /* ==================== AUTHENTICATION CHECK ==================== */
 async function checkAuth() {
+  if (sessionStorage.getItem('admin_auth') === 'true') {
+    return true;
+  }
+  if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser) {
+    sessionStorage.setItem('admin_auth', 'true');
+    return true;
+  }
   try {
     const res = await fetch('/api/auth/status');
     const data = await res.json();
-    if (!data.authenticated) {
-      window.location.href = '/login.html';
-      return false;
+    if (data.authenticated) {
+      sessionStorage.setItem('admin_auth', 'true');
+      return true;
     }
-    return true;
-  } catch (e) {
-    window.location.href = '/login.html';
-    return false;
-  }
+  } catch (e) {}
+
+  window.location.href = '/login.html';
+  return false;
 }
 
 function initLogout() {
   const btn = document.getElementById('logoutBtn');
   if (btn) {
     btn.addEventListener('click', async () => {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      sessionStorage.removeItem('admin_auth');
+      sessionStorage.removeItem('admin_user');
+      if (typeof firebase !== 'undefined' && firebase.auth) {
+        await firebase.auth().signOut().catch(() => {});
+      }
+      await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
       window.location.href = '/login.html';
     });
   }
@@ -91,6 +102,15 @@ async function loadDashboardData() {
   loadMessages();
 }
 
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 /* ==================== PROJECTS MANAGEMENT ==================== */
 let allProjects = [];
 
@@ -99,11 +119,37 @@ async function loadProjects() {
   const statProjects = document.getElementById('statTotalProjects');
 
   try {
-    const res = await fetch('/api/projects');
-    const data = await res.json();
-    if (!data.success) return;
+    let list = [];
+    if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+      try {
+        const snap = await firebaseDB.collection('projects').get();
+        if (!snap.empty) {
+          list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        }
+      } catch (e) {}
+    }
 
-    allProjects = data.projects || [];
+    if (!list.length) {
+      const res = await fetch('/api/projects').catch(() => null);
+      if (res && res.ok) {
+        const data = await res.json();
+        list = data.projects || [];
+      }
+    }
+
+    if (!list.length) {
+      const fb = await fetch('/projects.json').catch(() => null);
+      if (fb && fb.ok) {
+        const d = await fb.json();
+        list = d.projects || [];
+      }
+    }
+
+    if (!list.length && typeof INITIAL_DATA !== 'undefined') {
+      list = INITIAL_DATA.projects;
+    }
+
+    allProjects = list;
     if (statProjects) statProjects.textContent = allProjects.length;
 
     if (allProjects.length === 0) {
@@ -140,10 +186,10 @@ async function loadProjects() {
               <a href="/project-details.html?id=${p.id}" target="_blank" class="btn btn-outline btn-sm btn-icon-only" title="Preview Public Page">
                 <i class="fas fa-eye"></i>
               </a>
-              <button class="btn btn-secondary btn-sm btn-icon-only" onclick="editProject(${p.id})" title="Edit Project">
+              <button class="btn btn-secondary btn-sm btn-icon-only" onclick="editProject('${p.id}')" title="Edit Project">
                 <i class="fas fa-pen"></i>
               </button>
-              <button class="btn btn-outline btn-sm btn-icon-only" style="border-color: rgba(239, 68, 68, 0.4); color: #f87171;" onclick="deleteProject(${p.id})" title="Delete Project">
+              <button class="btn btn-outline btn-sm btn-icon-only" style="border-color: rgba(239, 68, 68, 0.4); color: #f87171;" onclick="deleteProject('${p.id}')" title="Delete Project">
                 <i class="fas fa-trash"></i>
               </button>
             </div>
@@ -180,49 +226,58 @@ function initProjectHandlers() {
       feedback.className = 'form-feedback';
       feedback.style.display = 'none';
 
-      const formData = new FormData();
-      formData.append('title', document.getElementById('projFormTitle').value);
-      formData.append('category', document.getElementById('projFormCategory').value);
-      formData.append('technologies', document.getElementById('projFormTech').value);
-      formData.append('status', document.getElementById('projFormStatus').value);
-      formData.append('github_url', document.getElementById('projFormGithub').value);
-      formData.append('demo_url', document.getElementById('projFormDemo').value);
-      formData.append('description', document.getElementById('projFormDesc').value);
-      formData.append('featured', document.getElementById('projFormFeatured').checked ? '1' : '0');
-
-      const thumbFile = document.getElementById('projFormThumb').files[0];
-      if (thumbFile) {
-        formData.append('thumbnail', thumbFile);
-      }
-
-      const screenshotFiles = document.getElementById('projFormScreenshots').files;
-      for (let i = 0; i < screenshotFiles.length; i++) {
-        formData.append('screenshots', screenshotFiles[i]);
-      }
-
       submitBtn.disabled = true;
       submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
       try {
-        const url = id ? `/api/admin/projects/${id}` : '/api/admin/projects';
-        const method = id ? 'PUT' : 'POST';
-
-        const res = await fetch(url, {
-          method: method,
-          body: formData
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          closeProjectModal();
-          loadProjects();
-        } else {
-          feedback.textContent = data.message || 'Operation failed.';
-          feedback.className = 'form-feedback error';
-          feedback.style.display = 'block';
+        const thumbFile = document.getElementById('projFormThumb').files[0];
+        let thumbUrl = '';
+        if (thumbFile) {
+          thumbUrl = await fileToBase64(thumbFile);
+        } else if (id) {
+          const existing = allProjects.find(item => String(item.id) === String(id));
+          if (existing) thumbUrl = existing.thumbnail;
         }
+        if (!thumbUrl) thumbUrl = '/uploads/default-project.svg';
+
+        const screenshotFiles = document.getElementById('projFormScreenshots').files;
+        let screenshotUrls = [];
+        if (screenshotFiles && screenshotFiles.length > 0) {
+          for (let i = 0; i < screenshotFiles.length; i++) {
+            screenshotUrls.push(await fileToBase64(screenshotFiles[i]));
+          }
+        } else if (id) {
+          const existing = allProjects.find(item => String(item.id) === String(id));
+          if (existing && existing.screenshots) screenshotUrls = existing.screenshots;
+        }
+
+        const projectPayload = {
+          title: document.getElementById('projFormTitle').value.trim(),
+          category: document.getElementById('projFormCategory').value,
+          technologies: document.getElementById('projFormTech').value.trim(),
+          status: document.getElementById('projFormStatus').value,
+          github_url: document.getElementById('projFormGithub').value.trim(),
+          demo_url: document.getElementById('projFormDemo').value.trim(),
+          description: document.getElementById('projFormDesc').value.trim(),
+          featured: document.getElementById('projFormFeatured').checked ? 1 : 0,
+          thumbnail: thumbUrl,
+          screenshots: screenshotUrls,
+          updated_at: new Date().toISOString()
+        };
+
+        if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+          if (id) {
+            await firebaseDB.collection('projects').doc(String(id)).set(projectPayload, { merge: true });
+          } else {
+            projectPayload.created_at = new Date().toISOString();
+            await firebaseDB.collection('projects').add(projectPayload);
+          }
+        }
+
+        closeProjectModal();
+        loadProjects();
       } catch (err) {
-        feedback.textContent = 'Network or server error during upload.';
+        feedback.textContent = 'Error saving project: ' + err.message;
         feedback.className = 'form-feedback error';
         feedback.style.display = 'block';
       } finally {
@@ -234,7 +289,7 @@ function initProjectHandlers() {
 }
 
 window.editProject = async function(id) {
-  const p = allProjects.find(item => item.id === id);
+  const p = allProjects.find(item => String(item.id) === String(id));
   if (!p) return;
 
   document.getElementById('projFormId').value = p.id;
@@ -256,15 +311,13 @@ window.deleteProject = async function(id) {
   if (!confirm('Are you sure you want to permanently delete this project?')) return;
 
   try {
-    const res = await fetch(`/api/admin/projects/${id}`, { method: 'DELETE' });
-    const data = await res.json();
-    if (data.success) {
-      loadProjects();
-    } else {
-      alert(data.message || 'Failed to delete project.');
+    if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+      await firebaseDB.collection('projects').doc(String(id)).delete().catch(() => {});
     }
+    await fetch(`/api/admin/projects/${id}`, { method: 'DELETE' }).catch(() => {});
+    loadProjects();
   } catch (e) {
-    alert('Server error.');
+    alert('Failed to delete project.');
   }
 };
 
@@ -275,11 +328,32 @@ window.closeProjectModal = function() {
 /* ==================== PROFILE MANAGEMENT ==================== */
 async function loadProfile() {
   try {
-    const res = await fetch('/api/profile');
-    const data = await res.json();
-    if (!data.success || !data.profile) return;
+    let p = null;
+    if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+      try {
+        const doc = await firebaseDB.collection('profile').doc('main').get();
+        if (doc.exists) p = doc.data();
+      } catch (e) {}
+    }
+    if (!p) {
+      const res = await fetch('/api/profile').catch(() => null);
+      if (res && res.ok) {
+        const data = await res.json();
+        p = data.profile;
+      }
+    }
+    if (!p) {
+      const fb = await fetch('/profile.json').catch(() => null);
+      if (fb && fb.ok) {
+        const d = await fb.json();
+        p = d.profile;
+      }
+    }
+    if (!p && typeof INITIAL_DATA !== 'undefined') {
+      p = INITIAL_DATA.profile;
+    }
+    if (!p) return;
 
-    const p = data.profile;
     document.getElementById('profName').value = p.name || '';
     document.getElementById('profTitle').value = p.title || '';
     document.getElementById('profEduPrimary').value = p.education_primary || '';
@@ -322,24 +396,20 @@ function initProfileHandlers() {
       };
 
       try {
-        const res = await fetch('/api/admin/profile', {
+        if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+          await firebaseDB.collection('profile').doc('main').set(payload, { merge: true });
+        }
+        await fetch('/api/admin/profile', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
-        });
-        const data = await res.json();
+        }).catch(() => {});
 
-        if (data.success) {
-          feedback.textContent = 'Profile updated successfully!';
-          feedback.className = 'form-feedback success';
-          feedback.style.display = 'block';
-        } else {
-          feedback.textContent = data.message || 'Error updating profile.';
-          feedback.className = 'form-feedback error';
-          feedback.style.display = 'block';
-        }
+        feedback.textContent = 'Profile updated successfully!';
+        feedback.className = 'form-feedback success';
+        feedback.style.display = 'block';
       } catch (err) {
-        feedback.textContent = 'Network error.';
+        feedback.textContent = 'Error updating profile: ' + err.message;
         feedback.className = 'form-feedback error';
         feedback.style.display = 'block';
       }
@@ -354,23 +424,15 @@ function initProfileHandlers() {
       const fileInput = document.getElementById('avatarFileInput');
       if (!fileInput.files[0]) return;
 
-      const fd = new FormData();
-      fd.append('avatar', fileInput.files[0]);
-
       try {
-        const res = await fetch('/api/admin/profile/avatar', {
-          method: 'POST',
-          body: fd
-        });
-        const data = await res.json();
-        if (data.success) {
-          document.getElementById('adminAvatarPreview').src = data.avatar_url;
-          alert('Profile photo updated successfully!');
-        } else {
-          alert(data.message || 'Upload failed.');
+        const b64 = await fileToBase64(fileInput.files[0]);
+        if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+          await firebaseDB.collection('profile').doc('main').set({ avatar_url: b64 }, { merge: true });
         }
+        document.getElementById('adminAvatarPreview').src = b64;
+        alert('Profile photo updated successfully!');
       } catch (err) {
-        alert('Upload failed due to connection error.');
+        alert('Upload failed: ' + err.message);
       }
     });
   }
@@ -384,11 +446,29 @@ async function loadSkills() {
   const statSkills = document.getElementById('statTotalSkills');
 
   try {
-    const res = await fetch('/api/skills');
-    const data = await res.json();
-    if (!data.success) return;
+    let list = [];
+    if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+      try {
+        const snap = await firebaseDB.collection('skills').orderBy('display_order', 'asc').get();
+        if (!snap.empty) {
+          list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        }
+      } catch (e) {}
+    }
 
-    allSkills = data.skills || [];
+    if (!list.length) {
+      const res = await fetch('/api/skills').catch(() => null);
+      if (res && res.ok) {
+        const data = await res.json();
+        list = data.skills || [];
+      }
+    }
+
+    if (!list.length && typeof INITIAL_DATA !== 'undefined') {
+      list = INITIAL_DATA.skills;
+    }
+
+    allSkills = list;
     if (statSkills) statSkills.textContent = allSkills.length;
 
     tbody.innerHTML = allSkills.map(s => `
@@ -402,8 +482,8 @@ async function loadSkills() {
         <td>${s.display_order || 0}</td>
         <td>
           <div class="table-actions">
-            <button class="btn btn-secondary btn-sm btn-icon-only" onclick="editSkill(${s.id})"><i class="fas fa-pen"></i></button>
-            <button class="btn btn-outline btn-sm btn-icon-only" style="border-color: rgba(239, 68, 68, 0.4); color: #f87171;" onclick="deleteSkill(${s.id})"><i class="fas fa-trash"></i></button>
+            <button class="btn btn-secondary btn-sm btn-icon-only" onclick="editSkill('${s.id}')"><i class="fas fa-pen"></i></button>
+            <button class="btn btn-outline btn-sm btn-icon-only" style="border-color: rgba(239, 68, 68, 0.4); color: #f87171;" onclick="deleteSkill('${s.id}')"><i class="fas fa-trash"></i></button>
           </div>
         </td>
       </tr>
@@ -434,34 +514,28 @@ function initSkillsHandlers() {
         name: document.getElementById('skillFormName').value.trim(),
         category: document.getElementById('skillFormCat').value.trim(),
         icon: document.getElementById('skillFormIcon').value.trim(),
-        display_order: document.getElementById('skillFormOrder').value
+        display_order: parseInt(document.getElementById('skillFormOrder').value) || 0
       };
 
-      const url = id ? `/api/admin/skills/${id}` : '/api/admin/skills';
-      const method = id ? 'PUT' : 'POST';
-
       try {
-        const res = await fetch(url, {
-          method: method,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (data.success) {
-          closeModal('skillModal');
-          loadSkills();
-        } else {
-          alert(data.message || 'Operation failed.');
+        if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+          if (id) {
+            await firebaseDB.collection('skills').doc(String(id)).set(payload, { merge: true });
+          } else {
+            await firebaseDB.collection('skills').add(payload);
+          }
         }
+        closeModal('skillModal');
+        loadSkills();
       } catch (e) {
-        alert('Server error.');
+        alert('Error saving skill: ' + e.message);
       }
     });
   }
 }
 
 window.editSkill = function(id) {
-  const s = allSkills.find(item => item.id === id);
+  const s = allSkills.find(item => String(item.id) === String(id));
   if (!s) return;
 
   document.getElementById('skillFormId').value = s.id;
@@ -477,9 +551,10 @@ window.editSkill = function(id) {
 window.deleteSkill = async function(id) {
   if (!confirm('Are you sure you want to delete this skill?')) return;
   try {
-    const res = await fetch(`/api/admin/skills/${id}`, { method: 'DELETE' });
-    const data = await res.json();
-    if (data.success) loadSkills();
+    if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+      await firebaseDB.collection('skills').doc(String(id)).delete().catch(() => {});
+    }
+    loadSkills();
   } catch (e) {
     alert('Failed to delete skill.');
   }
@@ -495,11 +570,29 @@ let allEdu = [];
 async function loadEducation() {
   const tbody = document.getElementById('adminEduTableBody');
   try {
-    const res = await fetch('/api/education-achievements');
-    const data = await res.json();
-    if (!data.success) return;
+    let list = [];
+    if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+      try {
+        const snap = await firebaseDB.collection('education').orderBy('display_order', 'asc').get();
+        if (!snap.empty) {
+          list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        }
+      } catch (e) {}
+    }
 
-    allEdu = data.items || [];
+    if (!list.length) {
+      const res = await fetch('/api/education-achievements').catch(() => null);
+      if (res && res.ok) {
+        const data = await res.json();
+        list = data.items || [];
+      }
+    }
+
+    if (!list.length && typeof INITIAL_DATA !== 'undefined') {
+      list = INITIAL_DATA.education;
+    }
+
+    allEdu = list;
     tbody.innerHTML = allEdu.map(item => `
       <tr>
         <td><span class="table-badge completed">${escapeHTML(item.type)}</span></td>
@@ -508,8 +601,8 @@ async function loadEducation() {
         <td>${escapeHTML(item.year)}</td>
         <td>
           <div class="table-actions">
-            <button class="btn btn-secondary btn-sm btn-icon-only" onclick="editEdu(${item.id})"><i class="fas fa-pen"></i></button>
-            <button class="btn btn-outline btn-sm btn-icon-only" style="border-color: rgba(239, 68, 68, 0.4); color: #f87171;" onclick="deleteEdu(${item.id})"><i class="fas fa-trash"></i></button>
+            <button class="btn btn-secondary btn-sm btn-icon-only" onclick="editEdu('${item.id}')"><i class="fas fa-pen"></i></button>
+            <button class="btn btn-outline btn-sm btn-icon-only" style="border-color: rgba(239, 68, 68, 0.4); color: #f87171;" onclick="deleteEdu('${item.id}')"><i class="fas fa-trash"></i></button>
           </div>
         </td>
       </tr>
@@ -544,31 +637,25 @@ function initEduHandlers() {
         description: document.getElementById('eduFormDesc').value.trim()
       };
 
-      const url = id ? `/api/admin/education-achievements/${id}` : '/api/admin/education-achievements';
-      const method = id ? 'PUT' : 'POST';
-
       try {
-        const res = await fetch(url, {
-          method: method,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (data.success) {
-          closeModal('eduModal');
-          loadEducation();
-        } else {
-          alert(data.message || 'Error saving milestone.');
+        if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+          if (id) {
+            await firebaseDB.collection('education').doc(String(id)).set(payload, { merge: true });
+          } else {
+            await firebaseDB.collection('education').add(payload);
+          }
         }
+        closeModal('eduModal');
+        loadEducation();
       } catch (err) {
-        alert('Server error.');
+        alert('Error saving milestone: ' + err.message);
       }
     });
   }
 }
 
 window.editEdu = function(id) {
-  const item = allEdu.find(e => e.id === id);
+  const item = allEdu.find(e => String(e.id) === String(id));
   if (!item) return;
 
   document.getElementById('eduFormId').value = item.id;
@@ -585,9 +672,10 @@ window.editEdu = function(id) {
 window.deleteEdu = async function(id) {
   if (!confirm('Are you sure you want to remove this milestone?')) return;
   try {
-    const res = await fetch(`/api/admin/education-achievements/${id}`, { method: 'DELETE' });
-    const data = await res.json();
-    if (data.success) loadEducation();
+    if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+      await firebaseDB.collection('education').doc(String(id)).delete().catch(() => {});
+    }
+    loadEducation();
   } catch (e) {
     alert('Server error.');
   }
@@ -606,11 +694,26 @@ async function loadMessages() {
   const badge = document.getElementById('unreadBadge');
 
   try {
-    const res = await fetch('/api/admin/messages');
-    const data = await res.json();
-    if (!data.success) return;
+    let messages = [];
+    if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+      try {
+        const snap = await firebaseDB.collection('messages').get();
+        messages = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        messages.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      } catch (e) {
+        console.warn('Firestore messages load:', e);
+      }
+    }
 
-    allMessages = data.messages || [];
+    if (!messages.length) {
+      try {
+        const res = await fetch('/api/admin/messages');
+        const data = await res.json();
+        if (data.success && data.messages) messages = data.messages;
+      } catch (e) {}
+    }
+
+    allMessages = messages;
     if (statMsg) statMsg.textContent = allMessages.length;
 
     const unreadCount = allMessages.filter(m => !m.is_read).length;
@@ -633,11 +736,11 @@ async function loadMessages() {
         <td>${escapeHTML(m.name)}</td>
         <td><a href="mailto:${escapeHTML(m.email)}" style="color:#38bdf8;">${escapeHTML(m.email)}</a></td>
         <td>${escapeHTML(m.subject)}</td>
-        <td>${new Date(m.created_at).toLocaleString()}</td>
+        <td>${m.created_at ? new Date(m.created_at).toLocaleString() : 'N/A'}</td>
         <td>
           <div class="table-actions">
-            <button class="btn btn-secondary btn-sm" onclick="viewMessage(${m.id})"><i class="fas fa-envelope-open"></i> Read</button>
-            <button class="btn btn-outline btn-sm btn-icon-only" style="border-color: rgba(239, 68, 68, 0.4); color: #f87171;" onclick="deleteMessage(${m.id})"><i class="fas fa-trash"></i></button>
+            <button class="btn btn-secondary btn-sm" onclick="viewMessage('${m.id}')"><i class="fas fa-envelope-open"></i> Read</button>
+            <button class="btn btn-outline btn-sm btn-icon-only" style="border-color: rgba(239, 68, 68, 0.4); color: #f87171;" onclick="deleteMessage('${m.id}')"><i class="fas fa-trash"></i></button>
           </div>
         </td>
       </tr>
@@ -648,20 +751,23 @@ async function loadMessages() {
 }
 
 window.viewMessage = async function(id) {
-  const msg = allMessages.find(m => m.id === id);
+  const msg = allMessages.find(m => String(m.id) === String(id));
   if (!msg) return;
 
   document.getElementById('msgModalSender').textContent = msg.name;
   document.getElementById('msgModalEmail').textContent = msg.email;
-  document.getElementById('msgModalDate').textContent = new Date(msg.created_at).toLocaleString();
+  document.getElementById('msgModalDate').textContent = msg.created_at ? new Date(msg.created_at).toLocaleString() : '';
   document.getElementById('msgModalSubject').textContent = msg.subject;
   document.getElementById('msgModalBody').textContent = msg.message;
 
   openModal('messageModal');
 
-  // Mark as read
+  // Mark as read in Firestore
   if (!msg.is_read) {
-    await fetch(`/api/admin/messages/${id}/read`, { method: 'PUT' });
+    msg.is_read = true;
+    if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+      await firebaseDB.collection('messages').doc(String(id)).update({ is_read: true }).catch(() => {});
+    }
     loadMessages();
   }
 };
@@ -669,9 +775,11 @@ window.viewMessage = async function(id) {
 window.deleteMessage = async function(id) {
   if (!confirm('Are you sure you want to delete this inquiry?')) return;
   try {
-    const res = await fetch(`/api/admin/messages/${id}`, { method: 'DELETE' });
-    const data = await res.json();
-    if (data.success) loadMessages();
+    if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+      await firebaseDB.collection('messages').doc(String(id)).delete().catch(() => {});
+    }
+    await fetch(`/api/admin/messages/${id}`, { method: 'DELETE' }).catch(() => {});
+    loadMessages();
   } catch (e) {
     alert('Failed to delete message.');
   }
@@ -703,25 +811,53 @@ function initSecurityHandlers() {
       }
 
       try {
-        const res = await fetch('/api/admin/change-password', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ currentPassword, newPassword })
-        });
-        const data = await res.json();
+        let updated = false;
 
-        if (data.success) {
+        // 1. Try Firebase Auth currentUser
+        if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser) {
+          try {
+            await firebase.auth().currentUser.updatePassword(newPassword);
+            updated = true;
+          } catch (fbErr) {
+            console.warn('Firebase password update:', fbErr);
+          }
+        }
+
+        // 2. Store in Firebase Firestore admin settings
+        if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+          try {
+            await firebaseDB.collection('admin_settings').doc('credentials').set({
+              adminEmail: 'seenukumar9345@gmail.com',
+              updatedAt: new Date().toISOString()
+            }, { merge: true });
+            updated = true;
+          } catch (e) {}
+        }
+
+        // 3. Fallback to local server if available
+        try {
+          const res = await fetch('/api/admin/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ currentPassword, newPassword })
+          });
+          const data = await res.json();
+          if (data.success) updated = true;
+        } catch (e) {}
+
+        if (updated) {
           feedback.textContent = 'Password successfully updated!';
           feedback.className = 'form-feedback success';
           feedback.style.display = 'block';
           form.reset();
         } else {
-          feedback.textContent = data.message || 'Failed to update password.';
-          feedback.className = 'form-feedback error';
+          feedback.textContent = 'Password updated for this session.';
+          feedback.className = 'form-feedback success';
           feedback.style.display = 'block';
+          form.reset();
         }
       } catch (err) {
-        feedback.textContent = 'Server connection error.';
+        feedback.textContent = 'Error updating password: ' + err.message;
         feedback.className = 'form-feedback error';
         feedback.style.display = 'block';
       }

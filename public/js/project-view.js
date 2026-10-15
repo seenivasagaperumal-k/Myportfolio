@@ -12,18 +12,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   try {
-    let res = await fetch(`/api/projects/${projectId}`);
-    let data;
-    if (res.ok) {
-      data = await res.json();
-    } else {
-      const fb = await fetch('/projects.json');
-      const fbData = await fb.json();
-      const p = (fbData.projects || []).find(item => String(item.id) === String(projectId));
-      data = { success: !!p, project: p };
+    let p = null;
+    if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+      try {
+        const doc = await firebaseDB.collection('projects').doc(String(projectId)).get();
+        if (doc.exists) {
+          p = { id: doc.id, ...doc.data() };
+        }
+      } catch (e) {}
     }
 
-    if (!data.success || !data.project) {
+    if (!p) {
+      const fb = await fetch('/projects.json').catch(() => null);
+      if (fb && fb.ok) {
+        const fbData = await fb.json();
+        p = (fbData.projects || []).find(item => String(item.id) === String(projectId));
+      }
+    }
+
+    if (!p && typeof INITIAL_DATA !== 'undefined') {
+      p = (INITIAL_DATA.projects || []).find(item => String(item.id) === String(projectId));
+    }
+
+    if (!p) {
       document.getElementById('projTitle').textContent = 'Project Not Found';
       document.getElementById('projFullDesc').textContent = 'The requested project could not be located in the repository.';
       return;

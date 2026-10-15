@@ -98,20 +98,22 @@
     </div>
   </div>
 
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+  <script src="/js/firebase-config.js"></script>
+
   <script>
     const form = document.getElementById('adminLoginForm');
     const feedback = document.getElementById('loginFeedback');
     const loginBtn = document.getElementById('loginBtn');
 
     // If already logged in, redirect directly to admin.html
-    fetch('/api/auth/status')
-      .then(res => res.json())
-      .then(data => {
-        if (data.authenticated) {
-          window.location.href = '/admin.html';
-        }
-      })
-      .catch(() => {});
+    if (sessionStorage.getItem('admin_auth') === 'true') {
+      window.location.href = '/admin.html';
+    }
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -124,30 +126,54 @@
       loginBtn.disabled = true;
       loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Authenticating...';
 
-      try {
-        const res = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-        });
-        const data = await res.json();
+      let authenticated = false;
 
-        if (data.success) {
-          feedback.textContent = 'Login successful! Redirecting to dashboard...';
-          feedback.className = 'form-feedback success';
-          feedback.style.display = 'block';
-          setTimeout(() => {
-            window.location.href = '/admin.html';
-          }, 800);
-        } else {
-          feedback.textContent = data.message || 'Invalid credentials.';
-          feedback.className = 'form-feedback error';
-          feedback.style.display = 'block';
-          loginBtn.disabled = false;
-          loginBtn.innerHTML = '<i class="fas fa-right-to-bracket"></i> Sign In to Dashboard';
+      // 1. Try Firebase Authentication first
+      if (typeof firebase !== 'undefined' && firebase.auth) {
+        try {
+          await firebase.auth().signInWithEmailAndPassword(username, password);
+          authenticated = true;
+        } catch (fbErr) {
+          // If user not created in Firebase Auth yet, check against authorized admin credentials
+          if (username.toLowerCase() === 'seenukumar9345@gmail.com' && password === 'seenukumar') {
+            try {
+              // Try creating the user in Firebase Auth so next time it is synced
+              await firebase.auth().createUserWithEmailAndPassword(username, password).catch(() => {});
+            } catch (e) {}
+            authenticated = true;
+          }
         }
-      } catch (err) {
-        feedback.textContent = 'Server connection error. Please verify the server is running.';
+      }
+
+      // 2. Direct Admin Credential verification
+      if (!authenticated && username.toLowerCase() === 'seenukumar9345@gmail.com' && password === 'seenukumar') {
+        authenticated = true;
+      }
+
+      // 3. Optional local backend check if running on local server
+      if (!authenticated) {
+        try {
+          const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+          });
+          const data = await res.json();
+          if (data.success) authenticated = true;
+        } catch (e) {}
+      }
+
+      if (authenticated) {
+        sessionStorage.setItem('admin_auth', 'true');
+        sessionStorage.setItem('admin_user', username);
+        feedback.textContent = 'Login successful! Redirecting to dashboard...';
+        feedback.className = 'form-feedback success';
+        feedback.style.display = 'block';
+        setTimeout(() => {
+          window.location.href = '/admin.html';
+        }, 800);
+      } else {
+        feedback.textContent = 'Invalid email or password.';
         feedback.className = 'form-feedback error';
         feedback.style.display = 'block';
         loginBtn.disabled = false;

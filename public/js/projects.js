@@ -26,27 +26,40 @@ document.addEventListener('DOMContentLoaded', () => {
         url += `search=${encodeURIComponent(searchTerm.trim())}&`;
       }
 
-      let res = await fetch(url);
-      let data;
-      if (res.ok) {
-        data = await res.json();
-      } else {
-        const fb = await fetch('/projects.json');
-        const fbData = await fb.json();
-        let list = fbData.projects || [];
-        if (activeCategory && activeCategory !== 'All') {
-          list = list.filter(p => p.category === activeCategory);
-        }
-        if (searchTerm && searchTerm.trim()) {
-          const s = searchTerm.trim().toLowerCase();
-          list = list.filter(p =>
-            p.title.toLowerCase().includes(s) ||
-            p.description.toLowerCase().includes(s) ||
-            (p.technologies || '').toLowerCase().includes(s)
-          );
-        }
-        data = { success: true, projects: list };
+      let list = [];
+      if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+        try {
+          const snap = await firebaseDB.collection('projects').get();
+          if (!snap.empty) {
+            list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          }
+        } catch (e) {}
       }
+
+      if (!list.length) {
+        const fb = await fetch('/projects.json').catch(() => null);
+        if (fb && fb.ok) {
+          const fbData = await fb.json();
+          list = fbData.projects || [];
+        }
+      }
+
+      if (!list.length && typeof INITIAL_DATA !== 'undefined') {
+        list = INITIAL_DATA.projects;
+      }
+
+      if (activeCategory && activeCategory !== 'All') {
+        list = list.filter(p => p.category === activeCategory);
+      }
+      if (searchTerm && searchTerm.trim()) {
+        const s = searchTerm.trim().toLowerCase();
+        list = list.filter(p =>
+          p.title.toLowerCase().includes(s) ||
+          p.description.toLowerCase().includes(s) ||
+          (p.technologies || '').toLowerCase().includes(s)
+        );
+      }
+      const data = { success: true, projects: list };
 
       if (!data.success || !data.projects || data.projects.length === 0) {
         grid.innerHTML = `

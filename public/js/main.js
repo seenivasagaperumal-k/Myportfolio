@@ -102,17 +102,27 @@ function initTypewriter() {
 /* ==================== PROFILE DATA ==================== */
 async function loadProfileData() {
   try {
-    let res = await fetch('/api/profile');
-    let data;
-    if (res.ok) {
-      data = await res.json();
-    } else {
-      const fb = await fetch('/profile.json');
-      data = await fb.json();
+    let p = null;
+    if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+      try {
+        const doc = await firebaseDB.collection('profile').doc('main').get();
+        if (doc.exists) p = doc.data();
+      } catch (e) {}
     }
-    if (!data.success || !data.profile) return;
 
-    const p = data.profile;
+    if (!p) {
+      const fb = await fetch('/profile.json').catch(() => null);
+      if (fb && fb.ok) {
+        const d = await fb.json();
+        p = d.profile;
+      }
+    }
+
+    if (!p && typeof INITIAL_DATA !== 'undefined') {
+      p = INITIAL_DATA.profile;
+    }
+
+    if (!p) return;
     
     // Hero & Navbar Elements
     if (p.name) {
@@ -183,23 +193,34 @@ async function loadSkillsData() {
   if (!grid) return;
 
   try {
-    let res = await fetch('/api/skills');
-    let data;
-    if (res.ok) {
-      data = await res.json();
-    } else {
-      const fb = await fetch('/profile.json');
-      const fbData = await fb.json();
-      data = { success: true, skills: fbData.skills || [] };
+    let skills = [];
+    if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+      try {
+        const snap = await firebaseDB.collection('skills').orderBy('display_order', 'asc').get();
+        if (!snap.empty) {
+          skills = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        }
+      } catch (e) {}
     }
-    if (!data.success || !data.skills) return;
 
-    if (data.skills.length === 0) {
+    if (!skills.length) {
+      const fb = await fetch('/profile.json').catch(() => null);
+      if (fb && fb.ok) {
+        const fbData = await fb.json();
+        skills = fbData.skills || [];
+      }
+    }
+
+    if (!skills.length && typeof INITIAL_DATA !== 'undefined') {
+      skills = INITIAL_DATA.skills;
+    }
+
+    if (skills.length === 0) {
       grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 2rem;">No skills listed yet.</div>`;
       return;
     }
 
-    grid.innerHTML = data.skills.map(skill => {
+    grid.innerHTML = skills.map(skill => {
       return `
         <div class="skill-card">
           <div class="skill-icon-wrapper">
@@ -232,26 +253,33 @@ async function loadProjectsData(category = 'All') {
   `;
 
   try {
-    let url = `/api/projects?limit=9`;
-    if (category && category !== 'All') {
-      url += `&category=${encodeURIComponent(category)}`;
+    let projects = [];
+    if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+      try {
+        const snap = await firebaseDB.collection('projects').get();
+        if (!snap.empty) {
+          projects = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        }
+      } catch (e) {}
     }
 
-    let res = await fetch(url);
-    let data;
-    if (res.ok) {
-      data = await res.json();
-    } else {
-      const fb = await fetch('/projects.json');
-      const fbData = await fb.json();
-      let list = fbData.projects || [];
-      if (category && category !== 'All') {
-        list = list.filter(p => p.category === category);
+    if (!projects.length) {
+      const fb = await fetch('/projects.json').catch(() => null);
+      if (fb && fb.ok) {
+        const fbData = await fb.json();
+        projects = fbData.projects || [];
       }
-      data = { success: true, projects: list.slice(0, 9) };
     }
 
-    if (!data.success || !data.projects || data.projects.length === 0) {
+    if (!projects.length && typeof INITIAL_DATA !== 'undefined') {
+      projects = INITIAL_DATA.projects;
+    }
+
+    if (category && category !== 'All') {
+      projects = projects.filter(p => p.category === category);
+    }
+
+    if (projects.length === 0) {
       grid.innerHTML = `
         <div class="projects-empty-state">
           <i class="fas fa-layer-group"></i>
@@ -265,7 +293,7 @@ async function loadProjectsData(category = 'All') {
       return;
     }
 
-    grid.innerHTML = data.projects.map(proj => {
+    grid.innerHTML = projects.slice(0, 9).map(proj => {
       const isCompleted = (proj.status || 'Completed').toLowerCase() === 'completed';
       const statusClass = isCompleted ? 'completed' : 'inprogress';
       const techList = (proj.technologies || '').split(',').map(t => t.trim()).filter(Boolean);
@@ -334,18 +362,31 @@ async function loadEducationData() {
   if (!container) return;
 
   try {
-    let res = await fetch('/api/education-achievements');
-    let data;
-    if (res.ok) {
-      data = await res.json();
-    } else {
-      const fb = await fetch('/profile.json');
-      const fbData = await fb.json();
-      data = { success: true, items: fbData.education || [] };
+    let items = [];
+    if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+      try {
+        const snap = await firebaseDB.collection('education').orderBy('display_order', 'asc').get();
+        if (!snap.empty) {
+          items = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        }
+      } catch (e) {}
     }
-    if (!data.success || !data.items || data.items.length === 0) return;
 
-    container.innerHTML = data.items.map(item => `
+    if (!items.length) {
+      const fb = await fetch('/profile.json').catch(() => null);
+      if (fb && fb.ok) {
+        const fbData = await fb.json();
+        items = fbData.education || [];
+      }
+    }
+
+    if (!items.length && typeof INITIAL_DATA !== 'undefined') {
+      items = INITIAL_DATA.education;
+    }
+
+    if (!items.length) return;
+
+    container.innerHTML = items.map(item => `
       <div class="timeline-item">
         <div class="timeline-dot"></div>
         <div class="timeline-card">
@@ -390,32 +431,53 @@ function initContactForm() {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending message...';
 
-    try {
-      const res = await fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, subject, message })
-      });
-      const data = await res.json();
+    let submitted = false;
 
-      if (data.success) {
-        feedback.textContent = data.message;
-        feedback.className = 'form-feedback success';
-        feedback.style.display = 'block';
-        form.reset();
-      } else {
-        feedback.textContent = data.message || 'Failed to deliver message.';
-        feedback.className = 'form-feedback error';
-        feedback.style.display = 'block';
+    // 1. Submit to Firebase Firestore
+    if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+      try {
+        await firebaseDB.collection('messages').add({
+          name,
+          email,
+          subject: subject || 'Portfolio Inquiry',
+          message,
+          created_at: new Date().toISOString(),
+          is_read: false
+        });
+        submitted = true;
+      } catch (fbErr) {
+        console.warn('Firebase submit error:', fbErr);
       }
-    } catch (err) {
-      feedback.textContent = 'Network error. Please try again later.';
-      feedback.className = 'form-feedback error';
-      feedback.style.display = 'block';
-    } finally {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Message';
     }
+
+    // 2. Fallback to local server API if running locally
+    if (!submitted) {
+      try {
+        const res = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, subject, message })
+        });
+        const data = await res.json();
+        if (data.success) submitted = true;
+      } catch (err) {}
+    }
+
+    if (submitted) {
+      feedback.textContent = 'Thank you for your message! Seenivasaga Perumal K. will get back to you soon.';
+      feedback.className = 'form-feedback success';
+      feedback.style.display = 'block';
+      form.reset();
+    } else {
+      // Fallback: open mailto
+      window.location.href = `mailto:seenukumar9345@gmail.com?subject=${encodeURIComponent(subject || 'Portfolio Inquiry')}&body=${encodeURIComponent(message + '\n\nFrom: ' + name + ' (' + email + ')')}`;
+      feedback.textContent = 'Opening your email application to send the message to seenukumar9345@gmail.com...';
+      feedback.className = 'form-feedback success';
+      feedback.style.display = 'block';
+    }
+
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Message';
   });
 }
 
